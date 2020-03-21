@@ -1,0 +1,66 @@
+---
+output: html_document
+
+---
+
+# 9.6.3 ROC Curves
+
+## Set up Support Vector Machine
+
+
+*   Factor the data frame
+*   Create a train set
+
+```{r message=FALSE}
+library(e1071)
+set.seed(1)
+x=matrix(rnorm(200*2), ncol=2)
+x[1:100,]=x[1:100,]+2
+x[101:150,]=x[101:150,]-2
+y=c(rep(1,150),rep(2,50))
+dat=data.frame(x=x,y=as.factor(y))
+train=sample(200,100)
+```
+
+
+
+This is where 9.6.3 really starts, but you need the other inputs to run the following code. 
+
+First, import the ROCR package which can be used to produce ROC curves. Then we write a short function to plot an ROC curve given a vector containing a numerical score for each observation, pred, and a vector containing the class label for each observation, truth.
+
+```{r}
+library(ROCR)
+rocplot=function(pred, truth, ...){
+  predob = prediction(pred, truth)
+  perf = performance(predob, "tpr", "fpr")
+  plot(perf,...)}
+
+svmfit.opt=svm(y~., data=dat[train,], kernel="radial",gamma=2, cost=1,decision.values=T)
+fitted=attributes(predict(svmfit.opt,dat[train,],decision.values=TRUE))$decision.values
+```
+
+
+
+Now produce the ROC plot.
+```{r}
+par(mfrow=c(1,2))
+rocplot(fitted,dat[train,"y"],main="Training Data")
+svmfit.flex=svm(y~., data=dat[train,], kernel="radial",gamma=50, cost=1, decision.values=T)
+fitted=attributes(predict(svmfit.flex,dat[train,],decision.values=T))$decision.values
+rocplot(fitted,dat[train,"y"],add=T,col="red")
+```
+
+
+
+SVM appears to be producing accurate predictions. By increasing gamma we can produce a more ???exible ???t and generate further improvements in accuracy.
+
+These ROC curves are all on training data. We are really more interested in the level of prediction accuracy on the test data. When we compute the ROC curves on the test data, the model with gamma = 2 appears to provide the most accurate results.
+
+```{r}
+fitted=attributes(predict(svmfit.opt,dat[-train,],decision.values=T))$decision.values
+rocplot(fitted,dat[-train,"y"],main="Test Data")
+fitted=attributes(predict(svmfit.flex,dat[-train,],decision.values=T))$decision.values
+rocplot(fitted,dat[-train,"y"],add=T,col="red")
+```
+
+
